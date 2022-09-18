@@ -1,9 +1,12 @@
 package com.hello;
 
+import com.google.gson.JsonObject;
 import com.hedera.hashgraph.sdk.*;
 import com.hello.service.HederaService;
+import com.hello.util.FileUtil;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Triple;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -304,5 +307,196 @@ public class Examples {
         log.info("Alice's  balance {}: {}", tokenId, service.getBalance(aliceAccountId));
 
         log.debug("DONE");
+    }
+
+    public static void schedule(HederaService service) throws Exception {
+        Client client = service.getClient();
+
+        Triple<AccountId, KeyList, List<PrivateKey>> senderAccountPair = service.createAccount(5, 3);
+        AccountId senderAccount = senderAccountPair.getLeft();
+        AccountId recipientAccount = service.createAccount();
+
+        PrivateKey ownerKey = senderAccountPair.getRight().get(0);
+        PrivateKey signerKey1 = senderAccountPair.getRight().get(1);
+        PrivateKey signerKey2 = senderAccountPair.getRight().get(2);
+
+        //Create a transaction to schedule
+        TransferTransaction transaction = new TransferTransaction()
+                .addHbarTransfer(senderAccount, Hbar.fromTinybars(-100))
+                .addHbarTransfer(recipientAccount, Hbar.fromTinybars(100));
+
+        //Schedule a transaction
+        TransactionResponse scheduleTransaction = new ScheduleCreateTransaction()
+                .setScheduledTransaction(transaction)
+                .freezeWith(client)
+                .sign(ownerKey)
+                .execute(client);
+
+        //Get the receipt of the transaction
+        TransactionReceipt receipt = scheduleTransaction.getReceipt(client);
+
+        //Get the schedule ID
+        ScheduleId scheduleId = receipt.scheduleId;
+        log.info("The schedule ID is {}", scheduleId);
+
+        //Get the scheduled transaction ID
+        TransactionId scheduledTxId = receipt.scheduledTransactionId;
+        log.info("The scheduled transaction ID is {}", scheduledTxId);
+
+        //Submit the first signatures
+        TransactionResponse signature1 = new ScheduleSignTransaction()
+                .setScheduleId(scheduleId)
+                .freezeWith(client)
+                .sign(signerKey1)
+                .execute(client);
+
+        //Verify the transaction was successful and submit a schedule info request
+        TransactionReceipt receipt1 = signature1.getReceipt(client);
+        log.info("The transaction status is {}", receipt1.status);
+
+        ScheduleInfo query1 = new ScheduleInfoQuery()
+                .setScheduleId(scheduleId)
+                .execute(client);
+
+        //Confirm the signature was added to the schedule
+        log.info("q1 {}", query1);
+
+
+        //Submit the second signature
+        TransactionResponse signature2 = new ScheduleSignTransaction()
+                .setScheduleId(scheduleId)
+                .freezeWith(client)
+                .sign(signerKey2)
+                .execute(client);
+
+        //Verify the transaction was successful
+        TransactionReceipt receipt2 = signature2.getReceipt(client);
+        log.info("The transaction status {}", receipt2.status);
+
+
+        //Get the schedule info
+        ScheduleInfo query2 = new ScheduleInfoQuery()
+                .setScheduleId(scheduleId)
+                .execute(client);
+
+        log.info("q2 {}", query2);
+
+
+        //Get the scheduled transaction record
+        TransactionRecord scheduledTxRecord = TransactionId.fromString(scheduledTxId.toString()).getRecord(client);
+        log.info("The scheduled transaction record is: {}", scheduledTxRecord);
+
+        log.debug("DONE");
+    }
+
+    public static void contract(HederaService service) throws Exception {
+        Client client = service.getClient();
+        JsonObject jsonObject = FileUtil.json("sol/hello_hedera.json");
+
+        //Store the "object" field from the HelloHedera.json file as hex-encoded bytecode
+        String object = jsonObject.getAsJsonObject("data")
+                .getAsJsonObject("bytecode")
+                .get("object")
+                .getAsString();
+        byte[] bytecode = object.getBytes(StandardCharsets.UTF_8);
+
+        //Create a file on Hedera and store the hex-encoded bytecode
+        FileCreateTransaction fileCreateTx = new FileCreateTransaction()
+                //Set the bytecode of the contract
+                .setContents(bytecode);
+
+        //Submit the file to the Hedera test network signing with the transaction fee payer key specified with the client
+        TransactionResponse submitTx = fileCreateTx.execute(client);
+
+        //Get the receipt of the file create transaction
+        TransactionReceipt fileReceipt = submitTx.getReceipt(client);
+
+        //Get the file ID from the receipt
+        FileId bytecodeFileId = fileReceipt.fileId;
+
+        //Log the file ID
+        log.info("The smart contract bytecode file ID is {}", bytecodeFileId);
+
+
+        // Instantiate the contract instance
+        ContractCreateTransaction contractTx = new ContractCreateTransaction()
+                //Set the file ID of the Hedera file storing the bytecode
+                .setBytecodeFileId(bytecodeFileId)
+                //Set the gas to instantiate the contract
+                .setGas(100_000)
+                //Provide the constructor parameters for the contract
+                .setConstructorParameters(new ContractFunctionParameters().addString("Hello from Hedera!"));
+
+        //Submit the transaction to the Hedera test network
+        TransactionResponse contractResponse = contractTx.execute(client);
+
+        //Get the receipt of the file create transaction
+        TransactionReceipt contractReceipt = contractResponse.getReceipt(client);
+
+        //Get the smart contract ID
+        ContractId newContractId = contractReceipt.contractId;
+
+        //Log the smart contract ID
+        log.info("The smart contract ID is {}", newContractId);
+
+        // Calls a function of the smart contract
+        ContractCallQuery contractQuery = new ContractCallQuery()
+                //Set the gas for the query
+                .setGas(100000)
+                //Set the contract ID to return the request for
+                .setContractId(newContractId)
+                //Set the function of the contract to call
+                .setFunction("get_message")
+                //Set the query payment for the node returning the request
+                //This value must cover the cost of the request otherwise will fail
+                .setQueryPayment(new Hbar(2));
+
+        //Submit to a Hedera network
+        ContractFunctionResult getMessage = contractQuery.execute(client);
+        //Get the message
+        String message = getMessage.getString(0);
+
+        //Log the message
+        log.info("The contract message: {}", message);
+
+
+        //Create the transaction to update the contract message
+        ContractExecuteTransaction contractExecTx = new ContractExecuteTransaction()
+                //Set the ID of the contract
+                .setContractId(newContractId)
+                //Set the gas for the call
+                .setGas(100_000)
+                //Set the function of the contract to call
+                .setFunction("set_message", new ContractFunctionParameters().addString("Hello from Hedera again!"));
+
+        //Submit the transaction to a Hedera network and store the response
+        TransactionResponse submitExecTx = contractExecTx.execute(client);
+
+        //Get the receipt of the transaction
+        TransactionReceipt receipt2 = submitExecTx.getReceipt(client);
+
+        //Confirm the transaction was executed successfully
+        log.info("The transaction status is: {}", receipt2.status);
+
+        //Query the contract for the contract message
+        ContractCallQuery contractCallQuery = new ContractCallQuery()
+                //Set ID of the contract to query
+                .setContractId(newContractId)
+                //Set the gas to execute the contract call
+                .setGas(100_000)
+                //Set the contract function
+                .setFunction("get_message")
+                //Set the query payment for the node returning the request
+                //This value must cover the cost of the request otherwise will fail
+                .setQueryPayment(new Hbar(2));
+
+        //Submit the query to a Hedera network
+        ContractFunctionResult contractUpdateResult = contractCallQuery.execute(client);
+
+        //Get the updated message
+        String message2 = contractUpdateResult.getString(0);
+
+        //Log the updated message
+        log.info("The contract updated message: {}", message2);
     }
 }

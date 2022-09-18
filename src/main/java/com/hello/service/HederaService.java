@@ -4,7 +4,11 @@ import com.hedera.hashgraph.sdk.*;
 import io.github.cdimascio.dotenv.Dotenv;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @Slf4j
@@ -37,6 +41,27 @@ public class HederaService {
                     .setInitialBalance(Hbar.fromTinybars(1000))
                     .execute(client);
             return newAccount.getReceipt(client).accountId;
+        });
+    }
+
+    public Triple<AccountId, KeyList, List<PrivateKey>> createAccount(int size, int threshold) {
+        return run(() -> {
+            ArrayList<PrivateKey> keys = new ArrayList<>();
+            KeyList keyList = KeyList.withThreshold(threshold);
+            for (int i = 0; i < size; i++) {
+                PrivateKey key = PrivateKey.generateED25519();
+                keys.add(key);
+                keyList.add(key);
+            }
+
+            TransactionResponse newAccount = new AccountCreateTransaction()
+                    .setKey(keyList)
+                    .setInitialBalance(Hbar.fromTinybars(1000))
+                    .execute(client);
+            AccountId accountId = newAccount.getReceipt(client).accountId;
+
+
+            return Triple.of(accountId, keyList, keys);
         });
     }
 
