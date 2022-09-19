@@ -18,18 +18,24 @@ public class HederaService {
     private final AccountId mainAccount;
 
     @Getter
+    private final PublicKey mainPublicKey;
+    
+    @Getter
+    private final PrivateKey mainPrivateKey;
+    
+    @Getter
     private final Client client;
 
     public HederaService() {
         Dotenv env = Dotenv.load();
         mainAccount = AccountId.fromString(env.get("MY_ACCOUNT_ID"));
-        PublicKey myPublicKey = PublicKey.fromString(env.get("MY_PUBLIC_KEY"));
-        log.info("Account {} {}", mainAccount, myPublicKey);
+        mainPublicKey = PublicKey.fromString(env.get("MY_PUBLIC_KEY"));
+        log.info("Account {} {}", mainAccount, mainPublicKey);
 
-        PrivateKey myPrivateKey = PrivateKey.fromString(env.get("MY_PRIVATE_KEY"));
+        mainPrivateKey = PrivateKey.fromString(env.get("MY_PRIVATE_KEY"));
 
         client = Client.forTestnet();
-        client.setOperator(mainAccount, myPrivateKey);
+        client.setOperator(mainAccount, mainPrivateKey);
     }
 
     public AccountId createAccount() {

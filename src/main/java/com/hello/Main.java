@@ -20,7 +20,7 @@ public class Main {
         // https://docs.hedera.com/guides/getting-started/try-examples
 
 
-        Examples.contract(service);
+        Examples.hts(service);
 
     }
 }

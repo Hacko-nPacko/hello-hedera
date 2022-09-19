@@ -1,6 +1,7 @@
 package com.hello;
 
 import com.google.gson.JsonObject;
+import com.google.protobuf.ByteString;
 import com.hedera.hashgraph.sdk.*;
 import com.hello.service.HederaService;
 import com.hello.util.FileUtil;
@@ -391,7 +392,7 @@ public class Examples {
 
     public static void contract(HederaService service) throws Exception {
         Client client = service.getClient();
-        JsonObject jsonObject = FileUtil.json("sol/hello_hedera.json");
+        JsonObject jsonObject = FileUtil.json("solcjs/hello_hedera.json");
 
         //Store the "object" field from the HelloHedera.json file as hex-encoded bytecode
         String object = jsonObject.getAsJsonObject("data")
@@ -498,5 +499,156 @@ public class Examples {
 
         //Log the updated message
         log.info("The contract updated message: {}", message2);
+    }
+
+    public static void hts(HederaService service) throws Exception {
+
+        Client client = service.getClient();
+
+        //Treasury Key
+        PrivateKey treasuryKey = PrivateKey.generateED25519();
+        PublicKey treasuryPublicKey = treasuryKey.getPublicKey();
+
+        //Create treasury account
+        AccountId treasuryId = service.createAccount(treasuryPublicKey);
+        log.info("The treasury account ID is {}", treasuryId);
+
+        //Create a token to interact with
+        TokenCreateTransaction createToken = new TokenCreateTransaction()
+                .setTokenName("HSCS demo")
+                .setTokenSymbol("H")
+                .setTokenType(TokenType.FUNGIBLE_COMMON)
+                .setTreasuryAccountId(treasuryId)
+                .setInitialSupply(500);
+
+        //Submit the token create transaction
+        TransactionResponse submitTokenTx = createToken.freezeWith(client).sign(treasuryKey).execute(client);
+
+        //Get the token ID
+        TokenId tokenId = submitTokenTx.getReceipt(client).tokenId;
+        log.info("The new token ID is {}", tokenId);
+
+        //Log the smart contract ID
+        ContractId newContractId = contractId1(service);
+        log.info("The smart contract ID is {}", newContractId);
+
+        //Associate the token to an account using the HTS contract
+        ContractExecuteTransaction associateToken = new ContractExecuteTransaction()
+                //The contract to call
+                .setContractId(newContractId)
+                //The gas for the transaction
+                .setGas(2_000_000)
+                //The contract function to call and parameters to pass
+                .setFunction("tokenAssociate", new ContractFunctionParameters()
+                        //The account ID to associate the token to
+                        .addAddress(service.getMainAccount().toSolidityAddress())
+                        //The token ID to associate to the account
+                        .addAddress(tokenId.toSolidityAddress()));
+
+        //Sign with the account key to associate and submit to the Hedera network
+        TransactionResponse associateTokenResponse = associateToken
+                .freezeWith(client)
+                .sign(service.getMainPrivateKey())
+                .execute(client);
+
+        log.info("The transaction status: {}", associateTokenResponse.getReceipt(client).status);
+
+        //Get the child token associate transaction record
+        TransactionRecord childRecords = new TransactionRecordQuery()
+                //Set the bool flag equal to true
+                .setIncludeChildren(true)
+                //The transaction ID of th parent contract execute transaction
+                .setTransactionId(associateTokenResponse.transactionId)
+                .execute(client);
+
+        log.info("The transaction record for the associate transaction {}", childRecords.children);
+
+        //The balance of the account
+        log.info("The {} should now be associated to my account: {}", tokenId, service.getBalance(service.getMainAccount()));
+
+        //Transfer the new token to the account
+        //Contract function params need to be in the order of the paramters provided in the tokenTransfer contract function
+        ContractExecuteTransaction tokenTransfer = new ContractExecuteTransaction()
+                .setContractId(newContractId)
+                .setGas(2_000_000)
+                .setFunction("tokenTransfer", new ContractFunctionParameters()
+                        //The ID of the token
+                        .addAddress(tokenId.toSolidityAddress())
+                        //The account to transfer the tokens from
+                        .addAddress(treasuryId.toSolidityAddress())
+                        //The account to transfer the tokens to
+                        .addAddress(service.getMainAccount().toSolidityAddress())
+                        //The number of tokens to transfer
+                        .addInt64(100));
+
+        //Sign the token transfer transaction with the treasury account to authorize the transfer and submit
+        ContractExecuteTransaction signTokenTransfer = tokenTransfer
+                .freezeWith(client)
+                .sign(treasuryKey);
+
+        //Submit transfer transaction
+        TransactionResponse submitTransfer = signTokenTransfer.execute(client);
+
+        //Get transaction status
+        Status txStatus = submitTransfer.getReceipt(client).status;
+
+        //Get the transaction status
+        log.info("The transfer transaction status {}", txStatus);
+
+        //Verify your account received the 100 tokens
+        log.info("My new account balance is {}", service.getBalance(service.getMainAccount()));
+    }
+
+    private static ContractId contractId1(HederaService service) throws Exception {
+        Client client = service.getClient();
+        byte[] bytecode = FileUtil.contents("solcjs/bin/HTS.bin").getBytes(StandardCharsets.UTF_8);
+
+        //Create a file on Hedera and store the hex-encoded bytecode
+        TransactionReceipt fileReceipt = new FileCreateTransaction()
+                .setKeys(service.getMainPrivateKey())
+                .execute(client)
+
+                .getReceipt(client);
+
+        //Get the file ID
+        FileId newFileId = fileReceipt.fileId;
+
+        //Log the file ID
+        log.info("The smart contract byte code file ID is {}", newFileId);
+
+        TransactionReceipt receipt = new FileAppendTransaction()
+                .setFileId(newFileId)
+                .setContents(bytecode)
+                .execute(client)
+                .getReceipt(client);
+
+
+        log.info("File append receipt: {}", receipt);
+
+        ByteString execute = new FileContentsQuery()
+                .setFileId(newFileId)
+                .execute(client);
+
+        log.info("file contents now: {}", execute.size());
+
+        //Deploy the contract
+        ContractCreateTransaction contractTx = new ContractCreateTransaction()
+                //The contract bytecode file
+                .setBytecodeFileId(newFileId)
+                //The max gas to reserve for this transaction
+                .setGas(2_000_000);
+
+        //Submit the transaction to the Hedera test network
+        TransactionReceipt contractReceipt = contractTx.execute(client).getReceipt(client);
+
+        //Get the smart contract ID
+        return contractReceipt.contractId;
+    }
+
+    private static ContractId contractId2(HederaService service) throws Exception {
+        Client client = service.getClient();
+
+        return null;
+
     }
 }
