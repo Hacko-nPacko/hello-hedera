@@ -666,7 +666,7 @@ public class Examples {
         log.info("alice account: {}", aliceId);
 
 //        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
-        String bytecode = FileUtil.contents("solcjs/NFTCreator_sol_NFTCreator.bin");
+        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
 
         // Create contract
         ContractCreateFlow createContract = new ContractCreateFlow()

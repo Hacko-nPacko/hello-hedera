@@ -10,12 +10,12 @@ contract ExpiryHelper is FeeHelper {
     function createAutoRenewExpiry(
         address autoRenewAccount,
         uint32 autoRenewPeriod
-    ) internal pure returns (IHederaTokenService.Expiry memory expiry) {
+    ) internal view returns (IHederaTokenService.Expiry memory expiry) {
         expiry.autoRenewAccount = autoRenewAccount;
         expiry.autoRenewPeriod = autoRenewPeriod;
     }
 
-    function createSecondExpiry(uint32 second) internal pure returns (IHederaTokenService.Expiry memory expiry) {
+    function createSecondExpiry(uint32 second) internal view returns (IHederaTokenService.Expiry memory expiry) {
         expiry.second = second;
     }
 }

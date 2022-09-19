@@ -16,7 +16,7 @@ contract KeyHelper is HederaTokenService {
         uint keyType,
         uint keyValueType,
         bytes memory key
-    ) internal pure returns (IHederaTokenService.TokenKey memory tokenKey) {
+    ) internal view returns (IHederaTokenService.TokenKey memory tokenKey) {
         tokenKey = IHederaTokenService.TokenKey(keyType, createKeyValueType(keyValueType, key, address(0)));
     }
 
@@ -24,7 +24,7 @@ contract KeyHelper is HederaTokenService {
         uint keyType,
         uint keyValueType,
         address key
-    ) internal pure returns (IHederaTokenService.TokenKey memory tokenKey) {
+    ) internal view returns (IHederaTokenService.TokenKey memory tokenKey) {
         tokenKey = IHederaTokenService.TokenKey(keyType, createKeyValueType(keyValueType, "", key));
     }
 
@@ -32,7 +32,7 @@ contract KeyHelper is HederaTokenService {
         uint keyValueType,
         bytes memory key,
         address keyAddress
-    ) internal pure returns (IHederaTokenService.KeyValue memory keyValue) {
+    ) internal view returns (IHederaTokenService.KeyValue memory keyValue) {
         if (keyValueType == INHERIT_ACCOUNT_KEY) {
             keyValue.inheritAccountKey = true;
         } else if (keyValueType == CONTRACT_ID_KEY) {
