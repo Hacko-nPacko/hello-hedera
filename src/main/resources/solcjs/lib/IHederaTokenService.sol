@@ -2,6 +2,8 @@
 pragma solidity >=0.4.9 <0.9.0;
 pragma experimental ABIEncoderV2;
 
+// This file was copied from github.com/hashgraph/hedera-smart-contracts on Aug 31 2022
+
 interface IHederaTokenService {
 
     /// Transfers cryptocurrency among two or more accounts by making the desired adjustments to their
@@ -140,7 +142,7 @@ interface IHederaTokenService {
         // IWA Compatibility. Depends on TokenSupplyType. For tokens of type FUNGIBLE_COMMON - the
         // maximum number of tokens that can be in circulation. For tokens of type NON_FUNGIBLE_UNIQUE -
         // the maximum number of NFTs (serial numbers) that can be minted. This field can never be changed!
-        int64 maxSupply;
+        uint32 maxSupply;
 
         // The default Freeze status (frozen or unfrozen) of Hedera accounts relative to this token. If
         // true, an account must be unfrozen before it can receive the token
@@ -167,7 +169,7 @@ interface IHederaTokenService {
         /// The royalty fees collected when transferring the token
         RoyaltyFee[] royaltyFees;
 
-        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false) 
+        /// Specifies whether the token kyc was defaulted with KycNotApplicable (true) or Revoked (false)
         bool defaultKycStatus;
 
         /// Specifies whether the token is deleted or not
@@ -395,8 +397,8 @@ interface IHederaTokenService {
     /// @return tokenAddress the created token's address
     function createFungibleToken(
         HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals
+        uint initialTotalSupply,
+        uint decimals
     ) external payable returns (int64 responseCode, address tokenAddress);
 
     /// Creates a Fungible Token with the specified properties
@@ -410,8 +412,8 @@ interface IHederaTokenService {
     /// @return tokenAddress the created token's address
     function createFungibleTokenWithCustomFees(
         HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals,
+        uint initialTotalSupply,
+        uint decimals,
         FixedFee[] memory fixedFees,
         FractionalFee[] memory fractionalFees
     ) external payable returns (int64 responseCode, address tokenAddress);
@@ -535,7 +537,7 @@ interface IHederaTokenService {
     /// @param serialNumber The NFT to find the approved address for
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     /// @return approved The approved address for this NFT, or the zero address if there is none
-    function getApproved(address token, uint256 serialNumber)
+    function getApproved(address token, int64 serialNumber)
         external
         returns (int64 responseCode, address approved);
 
@@ -604,7 +606,7 @@ interface IHederaTokenService {
     function getTokenDefaultFreezeStatus(address token)
         external
         returns (int64 responseCode, bool defaultFreezeStatus);
-    
+
     /// Query token default kyc status
     /// @param token The token address to check
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
@@ -745,17 +747,17 @@ interface IHederaTokenService {
 
     /// Query if valid token found for the given address
     /// @param token The token address
-    /// @return responseCode The response code for the status of the request. SUCCESS is 22.    
-    /// @return isToken True if valid token found for the given address     
-    function isToken(address token) 
-        external returns 
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return isToken True if valid token found for the given address
+    function isToken(address token)
+        external returns
         (int64 responseCode, bool isToken);
 
     /// Query to return the token type for a given address
     /// @param token The token address
-    /// @return responseCode The response code for the status of the request. SUCCESS is 22.    
-    /// @return tokenType the token type. 0 is FUNGIBLE_COMMON, 1 is NON_FUNGIBLE_UNIQUE, -1 is UNRECOGNIZED   
+    /// @return responseCode The response code for the status of the request. SUCCESS is 22.
+    /// @return tokenType the token type. 0 is FUNGIBLE_COMMON, 1 is NON_FUNGIBLE_UNIQUE, -1 is UNRECOGNIZED
     function getTokenType(address token)
-        external returns 
+        external returns
         (int64 responseCode, int32 tokenType);
 }

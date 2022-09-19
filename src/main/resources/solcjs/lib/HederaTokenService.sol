@@ -2,6 +2,8 @@
 pragma solidity >=0.5.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
+// This file was copied from github.com/hashgraph/hedera-smart-contracts on Aug 31 2022
+
 import "./HederaResponseCodes.sol";
 import "./IHederaTokenService.sol";
 
@@ -154,8 +156,8 @@ abstract contract HederaTokenService is HederaResponseCodes {
     /// @return tokenAddress the created token's address
     function createFungibleToken(
         IHederaTokenService.HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals) nonEmptyExpiry(token)
+        uint initialTotalSupply,
+        uint decimals) nonEmptyExpiry(token)
     internal returns (int responseCode, address tokenAddress) {
 
         (bool success, bytes memory result) = precompileAddress.call{value: msg.value}(
@@ -177,8 +179,8 @@ abstract contract HederaTokenService is HederaResponseCodes {
     /// @return tokenAddress the created token's address
     function createFungibleTokenWithCustomFees(
         IHederaTokenService.HederaToken memory token,
-        uint64 initialTotalSupply,
-        uint32 decimals,
+        uint initialTotalSupply,
+        uint decimals,
         IHederaTokenService.FixedFee[] memory fixedFees,
         IHederaTokenService.FractionalFee[] memory fractionalFees) nonEmptyExpiry(token)
     internal returns (int responseCode, address tokenAddress) {
@@ -615,7 +617,6 @@ abstract contract HederaTokenService is HederaResponseCodes {
 
     /// Operation to update token expiry info
     /// @param token The token address
-    /// @param expiryInfo The expiry properties of a token
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     function updateTokenExpiryInfo(address token, IHederaTokenService.Expiry memory expiryInfo) external returns (int responseCode){
         (bool success, bytes memory result) = precompileAddress.call(
@@ -623,10 +624,9 @@ abstract contract HederaTokenService is HederaResponseCodes {
         (responseCode) = success ? abi.decode(result, (int32)) : HederaResponseCodes.UNKNOWN;
     }
 
-    /// Operation to update specified token's keys
-    /// The key type to update is specified in the keys parameter
+    /// Operation to update token expiry info
     /// @param token The token address
-    /// @param keys The token key type to update
+    /// @param keys The token keys
     /// @return responseCode The response code for the status of the request. SUCCESS is 22.
     function updateTokenKeys(address token, IHederaTokenService.TokenKey[] memory keys) external returns (int64 responseCode){
         (bool success, bytes memory result) = precompileAddress.call(

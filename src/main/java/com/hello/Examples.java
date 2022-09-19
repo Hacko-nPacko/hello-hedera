@@ -666,7 +666,7 @@ public class Examples {
         log.info("alice account: {}", aliceId);
 
 //        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
-        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
+        String bytecode = FileUtil.contents("solcjs/bin/nft_creator_sol_NFTCreator.bin");
 
         // Create contract
         ContractCreateFlow createContract = new ContractCreateFlow()
@@ -689,7 +689,7 @@ public class Examples {
                         .addString("Fall Collection") // NFT Name
                         .addString("LEAF") // NFT Symbol
                         .addString("Just a memo") // NFT Memo
-                        .addInt64(10) // NFT max supply
+                        .addUint32(10) // NFT max supply
                         .addUint32(7_000_000)); // Expiration: Needs to be between 6999999 and 8000001
 
         TransactionResponse createTokenTx = createToken.execute(client);
