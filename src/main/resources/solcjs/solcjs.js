@@ -2,11 +2,7 @@ var solc = require('solc');
 
 var input = {
   language: 'Solidity',
-  sources: {
-    'hello_hedera.sol': {
-      content: 'contract C { function f() public { } }'
-    }
-  },
+  sources: ['NFTCreator.sol'],
   settings: {
     outputSelection: {
       '*': {

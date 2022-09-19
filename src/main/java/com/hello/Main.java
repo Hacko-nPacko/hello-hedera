@@ -16,11 +16,9 @@ public class Main {
         HederaService service = new HederaService();
 
         // https://github.com/hashgraph/hedera-sdk-java/tree/main/examples/src/main/java
-
         // https://docs.hedera.com/guides/getting-started/try-examples
 
-
-        Examples.hts(service);
+        Examples.nftContract(service);
 
     }
 }

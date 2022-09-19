@@ -651,4 +651,84 @@ public class Examples {
         return null;
 
     }
+
+    public static void nftContract(HederaService service) throws Exception {
+        Client client = service.getClient();
+
+        // ipfs URI
+        // QmPMxuj5cBmaiwaYJb1X7PkQA3gWFsKNCXvE2YcCCuoS9m nft_contract_metadata.json
+        String metadata = ("ipfs://bafybeiapghmnad5b7szsr45lt4otk75dvjnqdl74nhjozqrdytgbnhb4ca/nft_contract_metadata.json");
+        byte[][] byteArray = new byte[1][metadata.length()];
+        byteArray[0] = metadata.getBytes();
+
+        PrivateKey aliceKey = PrivateKey.generateED25519();
+        AccountId aliceId = service.createAccount(aliceKey.getPublicKey());
+        log.info("alice account: {}", aliceId);
+
+//        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
+        String bytecode = FileUtil.contents("solcjs/NFTCreator_sol_NFTCreator.bin");
+
+        // Create contract
+        ContractCreateFlow createContract = new ContractCreateFlow()
+                .setBytecode(bytecode) // Contract bytecode
+                .setGas(150_000); // Increase if revert
+
+        TransactionResponse createContractTx = createContract.execute(client);
+        TransactionReceipt createContractRx = createContractTx.getReceipt(client);
+        // Get the new contract ID
+        ContractId newContractId = createContractRx.contractId;
+
+        log.info("Contract created with ID: {}", newContractId);
+
+        // Create NFT using contract
+        ContractExecuteTransaction createToken = new ContractExecuteTransaction()
+                .setContractId(newContractId) // Contract id
+                .setGas(1_000_000) // Increase if revert
+                .setPayableAmount(new Hbar(500)) // Increase if revert
+                .setFunction("createNft", new ContractFunctionParameters()
+                        .addString("Fall Collection") // NFT Name
+                        .addString("LEAF") // NFT Symbol
+                        .addString("Just a memo") // NFT Memo
+                        .addInt64(10) // NFT max supply
+                        .addUint32(7_000_000)); // Expiration: Needs to be between 6999999 and 8000001
+
+        TransactionResponse createTokenTx = createToken.execute(client);
+        TransactionRecord createTokenRx = createTokenTx.getRecord(client);
+
+        String tokenIdSolidityAddr = createTokenRx.contractFunctionResult.getAddress(0);
+        AccountId tokenId = AccountId.fromSolidityAddress(tokenIdSolidityAddr);
+
+        log.info("Token created with ID: {}", tokenId);
+
+        // Mint NFT
+        ContractExecuteTransaction mintToken = new ContractExecuteTransaction()
+                .setContractId(newContractId)
+                .setGas(1_500_000)
+                .setFunction("mintNft", new ContractFunctionParameters()
+                        .addAddress(tokenIdSolidityAddr) // Token address
+                        .addBytesArray(byteArray)); // Metadata
+
+        TransactionResponse mintTokenTx = mintToken.execute(client);
+        TransactionRecord mintTokenRx = mintTokenTx.getRecord(client);
+        // NFT serial number
+        long serial = mintTokenRx.contractFunctionResult.getInt64(0);
+
+        log.info("Minted NFT with serial: " + serial);
+
+        // Transfer NFT to Alice
+        ContractExecuteTransaction transferToken = new ContractExecuteTransaction()
+                .setContractId(newContractId)
+                .setGas(1_500_000)
+                .setFunction("transferNft", new ContractFunctionParameters()
+                        .addAddress(tokenIdSolidityAddr) // Token id
+                        .addAddress(aliceId.toSolidityAddress()) // Token receiver (Alice)
+                        .addInt64(serial)) // Serial number
+                .freezeWith(client) // Freeze transaction using client
+                .sign(aliceKey); //Sign using Alice Private Key
+
+        TransactionResponse transferTokenTx = transferToken.execute(client);
+        TransactionReceipt transferTokenRx = transferTokenTx.getReceipt(client);
+
+        log.info("Transfer status: {}", transferTokenRx.status);
+    }
 }

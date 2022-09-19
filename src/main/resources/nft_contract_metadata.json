@@ -1,0 +1,13 @@
+{
+    "name": "leaf.jpeg",
+    "creator": "Mother Nature",
+    "description": "Autumn",
+    "type": "image/jpg",
+    "format": "none",
+    "properties": {
+        "city": "Boston",
+        "season": "Fall",
+        "decade": "20's"
+    },
+    "image": "ipfs://bafybeifzh4uzrcbsmn7ic2wqiq6d7ot6qh4ibj5kuihyt46bnzgifdpuea/leaf.jpeg"
+}
