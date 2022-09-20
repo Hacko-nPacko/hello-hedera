@@ -18,7 +18,9 @@ public class Main {
         // https://github.com/hashgraph/hedera-sdk-java/tree/main/examples/src/main/java
         // https://docs.hedera.com/guides/getting-started/try-examples
 
-        Examples.nftContract(service);
+//        Examples.nftContract(service);
+
+        AccountId account = service.createAccount();
 
     }
 }

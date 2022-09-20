@@ -42,11 +42,22 @@ public class HederaService {
         return run(() -> {
             PrivateKey newAccountPrivateKey = PrivateKey.generateED25519();
             PublicKey newAccountPublicKey = newAccountPrivateKey.getPublicKey();
+
+            AccountId newAccountIdPublicKey = newAccountPublicKey.toAccountId(0, 0);
+            log.info("New account id (pub key): {}", newAccountIdPublicKey);
+            log.info("New account priv key: {}", newAccountPrivateKey);
+            log.info("New account pub key: {}", newAccountPublicKey);
+            log.info("New account priv key (RAW EVM): 0x{}", newAccountPrivateKey.toStringRaw());
+            log.info("New account pub key (RAW): 0x{}", newAccountPublicKey.toStringRaw());
+            log.info("New account pub key (DER): 0x{}", newAccountPublicKey.toStringDER());
+
             TransactionResponse newAccount = new AccountCreateTransaction()
                     .setKey(newAccountPublicKey)
                     .setInitialBalance(Hbar.fromTinybars(1000))
                     .execute(client);
-            return newAccount.getReceipt(client).accountId;
+            AccountId accountId = newAccount.getReceipt(client).accountId;
+            log.info("New account id: {}", accountId);
+            return accountId;
         });
     }
 
