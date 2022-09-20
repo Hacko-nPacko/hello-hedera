@@ -392,7 +392,7 @@ public class Examples {
 
     public static void contract(HederaService service) throws Exception {
         Client client = service.getClient();
-        JsonObject jsonObject = FileUtil.json("solcjs/hello_hedera.json");
+        JsonObject jsonObject = FileUtil.json("contracts/hello_hedera.json");
 
         //Store the "object" field from the HelloHedera.json file as hex-encoded bytecode
         String object = jsonObject.getAsJsonObject("data")
@@ -601,7 +601,7 @@ public class Examples {
 
     private static ContractId contractId1(HederaService service) throws Exception {
         Client client = service.getClient();
-        byte[] bytecode = FileUtil.contents("solcjs/bin/HTS.bin").getBytes(StandardCharsets.UTF_8);
+        byte[] bytecode = FileUtil.contents("contracts/HTS.bin").getBytes(StandardCharsets.UTF_8);
 
         //Create a file on Hedera and store the hex-encoded bytecode
         TransactionReceipt fileReceipt = new FileCreateTransaction()
@@ -665,8 +665,8 @@ public class Examples {
         AccountId aliceId = service.createAccount(aliceKey.getPublicKey());
         log.info("alice account: {}", aliceId);
 
-//        String bytecode = FileUtil.contents("solcjs/bin/NFTCreator.bin");
-        String bytecode = FileUtil.contents("solcjs/bin/nft_creator_sol_NFTCreator.bin");
+//        String bytecode = FileUtil.contents("contracts/NFTCreator.bin");
+        String bytecode = FileUtil.contents("contracts/nft_creator_sol_NFTCreator.bin");
 
         // Create contract
         ContractCreateFlow createContract = new ContractCreateFlow()
